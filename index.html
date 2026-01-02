@@ -1,0 +1,582 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Investment Compounding Calculator (v3)</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --card: #111a2e;
+      --muted: #9fb0d0;
+      --text: #e9eefc;
+      --accent: #7aa2ff;
+      --accent2: #2ee59d;
+      --danger: #ff6b6b;
+      --border: rgba(255,255,255,0.09);
+      --shadow: 0 10px 30px rgba(0,0,0,0.35);
+    }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 700px at 20% 0%, rgba(122,162,255,0.15), transparent 50%),
+                  radial-gradient(900px 600px at 80% 30%, rgba(46,229,157,0.10), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      padding: 28px;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    h1 { font-size: 24px; margin: 0 0 6px; letter-spacing: 0.2px; }
+    .sub { color: var(--muted); margin: 0 0 18px; line-height: 1.4; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      padding: 16px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      align-items: end;
+    }
+
+    @media (min-width: 860px) {
+      .row { grid-template-columns: 1fr 1fr; }
+      .row.three { grid-template-columns: 1fr 1fr 1fr; }
+    }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin: 0 0 6px;
+    }
+    .input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.15);
+      color: var(--text);
+      outline: none;
+      font-size: 14px;
+    }
+    .input:focus {
+      border-color: rgba(122,162,255,0.55);
+      box-shadow: 0 0 0 4px rgba(122,162,255,0.12);
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    button {
+      border: 1px solid var(--border);
+      background: rgba(122,162,255,0.18);
+      color: var(--text);
+      padding: 11px 14px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+    button:hover { background: rgba(122,162,255,0.26); }
+    .secondary { background: rgba(255,255,255,0.06); }
+    .secondary:hover { background: rgba(255,255,255,0.10); }
+
+    .results {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    @media (min-width: 860px) {
+      .results { grid-template-columns: 1fr 1fr; }
+    }
+    .metric {
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.12);
+    }
+    .metric .k { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .metric .v { font-size: 22px; font-weight: 800; }
+    .metric .h { color: var(--muted); font-size: 12px; margin-top: 6px; }
+
+    .note { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.45; }
+    .error { color: var(--danger); font-size: 12px; margin-top: 8px; display: none; }
+    canvas { width: 100%; height: 260px; border-radius: 12px; }
+
+    .pill {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(46,229,157,0.10);
+      color: rgba(46,229,157,0.95);
+      font-size: 12px;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+  
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      overflow: hidden;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,0.12);
+    }
+    th, td {
+      text-align: right;
+      padding: 10px 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      font-size: 13px;
+    }
+    th {
+      text-align: right;
+      color: rgba(159,176,208,0.95);
+      font-weight: 700;
+      background: rgba(255,255,255,0.04);
+    }
+    td:first-child, th:first-child { text-align: left; }
+    tr:last-child td { border-bottom: none; }
+    .tableWrap { margin-top: 14px; }
+    .smallBtn { padding: 10px 12px; font-weight: 700; }
+
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Investment Compounding Calculator <span class="pill">Flexible compounding</span></h1>
+    <p class="sub">Enter your inputs and this will compute the final investment value, interest earned, and the inflation-adjusted (present value) of the final amount.</p>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row" style="grid-template-columns: 1fr;">
+          <div class="row" style="grid-template-columns: 1fr;">
+          <div>
+            <label>Initial investment</label>
+            <input id="initial" class="input" inputmode="decimal" value="10000" />
+          </div>
+          <div>
+            <label>Monthly investment</label>
+            <input id="monthly" class="input" inputmode="decimal" value="200" />
+          </div>
+          <div>
+            <label>Interest rate % per year</label>
+            <input id="rate" class="input" inputmode="decimal" value="8" />
+          </div>
+        </div>
+          <div>
+            <label>Currency</label>
+            <select id="currency" class="input">
+              <option value="USD" selected>USD</option>
+              <option value="INR">INR</option>
+              <option value="EUR">EUR</option>
+              <option value="GBP">GBP</option>
+              <option value="CAD">CAD</option>
+              <option value="AUD">AUD</option>
+              <option value="JPY">JPY</option>
+            </select>
+          </div>
+
+
+          </div>
+        </div>
+
+                <div class="row" style="margin-top: 12px;">
+          <div>
+            <label>Time period (years)</label>
+            <input id="years" class="input" inputmode="decimal" value="10" />
+          </div>
+          <div>
+            <label>Inflation % per year</label>
+            <input id="inflation" class="input" inputmode="decimal" value="3" />
+          </div>
+        </div>
+
+          </div>
+        </div>
+
+                <div class="row" style="margin-top: 12px;">
+          <div>
+            <label>Deposit timing</label>
+            <select id="timing" class="input">
+              <option value="end" selected>End of month (default)</option>
+              <option value="begin">Beginning of month</option>
+            </select>
+          </div>
+          <div>
+            <label>Compounding frequency</label>
+            <select id="compound" class="input">
+              <option value="monthly" selected>Monthly</option>
+              <option value="daily">Daily</option>
+              <option value="annual">Annual</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button id="calc">Calculate</button>
+          <button id="reset" class="secondary">Reset</button>
+        </div>
+
+        <div id="err" class="error">Please enter valid non-negative numbers.</div>
+        <div class="note">
+          Assumptions: interest rate is nominal annual rate. You can switch compounding frequency and whether deposits happen at the beginning or end of month.
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="results">
+          <div class="metric">
+            <div class="k">Final investment value</div>
+            <div id="finalValue" class="v">—</div>
+            <div class="h">Total balance after compounding + contributions</div>
+          </div>
+          <div class="metric">
+            <div class="k">Interest earned</div>
+            <div id="interestValue" class="v">—</div>
+            <div class="h">Final value minus total contributions</div>
+          </div>
+          <div class="metric">
+            <div class="k">Present value (inflation-adjusted)</div>
+            <div id="presentValue" class="v">—</div>
+            <div class="h">Final value discounted by inflation over the same years</div>
+          </div>
+          <div class="metric">
+            <div class="k">Total contributions</div>
+            <div id="contribValue" class="v">—</div>
+            <div class="h">Initial + monthly × months</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 14px;">
+          <label>Growth over time</label>
+          <canvas id="chart" width="900" height="300"></canvas>
+          <div class="note">Chart shows month-by-month balance.</div>
+          <div class="tableWrap">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+              <label style="margin:0;">Yearly breakdown</label>
+              <button id="exportCsv" class="secondary smallBtn">Export CSV</button>
+            </div>
+            <div class="note" style="margin-top:6px;">Shows end-of-year totals (year, contributions, interest earned that year, ending balance).</div>
+            <div style="margin-top:10px; overflow:auto;">
+              <table id="yearTable">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Contributions (year)</th>
+                    <th>Interest (year)</th>
+                    <th>Ending balance</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function toNum(val) {
+      if (val === null || val === undefined) return NaN;
+      var cleaned = ("" + val).replace(/,/g, "").trim();
+      return Number(cleaned);
+    }
+
+    function fmtCurrency(x) {
+      if (!isFinite(x)) return "—";
+      var cur = "USD";
+      var curEl = document.getElementById("currency");
+      if (curEl && curEl.value) cur = curEl.value;
+      try {
+        return x.toLocaleString(undefined, { style: "currency", currency: cur, maximumFractionDigits: 2 });
+      } catch (e) {
+        // Fallback if browser doesn't support a given currency code
+        return x.toLocaleString(undefined, { maximumFractionDigits: 2 }) + " " + cur;
+      }
+    }
+
+    function drawLineChart(canvas, data) {
+      var ctx = canvas.getContext("2d");
+      var w = canvas.width;
+      var h = canvas.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      if (!data || data.length < 2) return;
+
+      var padL = 48;
+      var padR = 18;
+      var padT = 18;
+      var padB = 32;
+
+      var minY = 0;
+      var maxY = 0;
+      for (var i = 0; i < data.length; i++) {
+        if (data[i] > maxY) maxY = data[i];
+      }
+      if (maxY <= 0) maxY = 1;
+
+      function xScale(i) {
+        return padL + (w - padL - padR) * (i / (data.length - 1));
+      }
+      function yScale(v) {
+        var t = (v - minY) / (maxY - minY);
+        return (h - padB) - t * (h - padT - padB);
+      }
+
+      ctx.strokeStyle = "rgba(255,255,255,0.08)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padL, padT);
+      ctx.lineTo(padL, h - padB);
+      ctx.lineTo(w - padR, h - padB);
+      ctx.stroke();
+
+      ctx.fillStyle = "rgba(159,176,208,0.9)";
+      ctx.font = "12px ui-sans-serif, system-ui";
+      ctx.fillText("0", 16, h - padB + 4);
+      ctx.fillText(fmtShort(maxY), 10, padT + 4);
+
+      for (var g = 1; g <= 3; g++) {
+        var y = padT + (h - padT - padB) * (g / 4);
+        ctx.strokeStyle = "rgba(255,255,255,0.06)";
+        ctx.beginPath();
+        ctx.moveTo(padL, y);
+        ctx.lineTo(w - padR, y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(122,162,255,0.95)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(xScale(0), yScale(data[0]));
+      for (var j = 1; j < data.length; j++) {
+        ctx.lineTo(xScale(j), yScale(data[j]));
+      }
+      ctx.stroke();
+
+      var lastX = xScale(data.length - 1);
+      var lastY = yScale(data[data.length - 1]);
+      ctx.fillStyle = "rgba(46,229,157,0.95)";
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    function fmtShort(x) {
+      if (!isFinite(x)) return "—";
+      var absx = Math.abs(x);
+      if (absx >= 1e12) return (x / 1e12).toFixed(2) + "T";
+      if (absx >= 1e9) return (x / 1e9).toFixed(2) + "B";
+      if (absx >= 1e6) return (x / 1e6).toFixed(2) + "M";
+      if (absx >= 1e3) return (x / 1e3).toFixed(2) + "K";
+      return x.toFixed(0);
+    }
+
+    function calculate() {
+      var initial = toNum(document.getElementById("initial").value);
+      var monthly = toNum(document.getElementById("monthly").value);
+      var ratePct = toNum(document.getElementById("rate").value);
+      var years = toNum(document.getElementById("years").value);
+      var inflPct = toNum(document.getElementById("inflation").value);
+      var timing = document.getElementById("timing").value;
+      var compound = document.getElementById("compound").value;
+
+      var errEl = document.getElementById("err");
+      errEl.style.display = "none";
+
+      if (![initial, monthly, ratePct, years, inflPct].every(function(v){ return isFinite(v) && v >= 0; })) {
+        errEl.style.display = "block";
+        return;
+      }
+
+      var monthsExact = years * 12;
+      var months = Math.round(monthsExact);
+      if (months < 0) months = 0;
+
+      var annualRate = (ratePct / 100);
+
+      // Convert annual nominal rate into an effective monthly rate depending on compounding frequency.
+      // monthly: r_m = annual/12
+      // daily:   r_m = (1 + annual/365)^(365/12) - 1
+      // annual:  r_m = (1 + annual)^(1/12) - 1
+      var rMonth = 0;
+      if (compound === "monthly") {
+        rMonth = annualRate / 12;
+      } else if (compound === "daily") {
+        rMonth = Math.pow(1 + (annualRate / 365), (365 / 12)) - 1;
+      } else if (compound === "annual") {
+        rMonth = Math.pow(1 + annualRate, (1 / 12)) - 1;
+      } else {
+        rMonth = annualRate / 12;
+      }
+
+      var balance = initial;
+      var balances = [balance];
+
+      for (var m = 1; m <= months; m++) {
+        if (timing === "begin") {
+          balance = balance + monthly;
+          balance = balance * (1 + rMonth);
+        } else {
+          balance = balance * (1 + rMonth);
+          balance = balance + monthly;
+        }
+        balances.push(balance);
+      }
+
+      var totalContrib = initial + monthly * months;
+      var finalValue = balance;
+      var interestEarned = finalValue - totalContrib;
+
+      var infl = inflPct / 100;
+      var presentValue = finalValue / Math.pow(1 + infl, years);
+
+      document.getElementById("finalValue").textContent = fmtCurrency(finalValue);
+      document.getElementById("interestValue").textContent = fmtCurrency(interestEarned);
+      document.getElementById("presentValue").textContent = fmtCurrency(presentValue);
+      document.getElementById("contribValue").textContent = fmtCurrency(totalContrib);
+
+
+
+      // Build yearly breakdown (end-of-year snapshots)
+      var tbody = document.querySelector("#yearTable tbody");
+      if (tbody) tbody.innerHTML = "";
+
+      var rows = [];
+      var startBalance = initial;
+      var prevYearEnd = initial;
+      var prevContribTotal = initial;
+
+      for (var y = 1; y <= Math.max(0, Math.round(years)); y++) {
+        var endMonth = Math.min(months, y * 12);
+        var yearEndBalance = balances[endMonth];
+        var contribTotalAtYearEnd = initial + monthly * endMonth;
+        var contribYear = contribTotalAtYearEnd - prevContribTotal;
+        var growthYear = yearEndBalance - prevYearEnd;
+        var interestYear = growthYear - contribYear;
+
+        rows.push({
+          year: y,
+          contribYear: contribYear,
+          interestYear: interestYear,
+          endBalance: yearEndBalance
+        });
+
+        if (tbody) {
+          var tr = document.createElement("tr");
+          var tdY = document.createElement("td");
+          tdY.textContent = String(y);
+          var tdC = document.createElement("td");
+          tdC.textContent = fmtCurrency(contribYear);
+          var tdI = document.createElement("td");
+          tdI.textContent = fmtCurrency(interestYear);
+          var tdE = document.createElement("td");
+          tdE.textContent = fmtCurrency(yearEndBalance);
+          tr.appendChild(tdY);
+          tr.appendChild(tdC);
+          tr.appendChild(tdI);
+          tr.appendChild(tdE);
+          tbody.appendChild(tr);
+        }
+
+        prevYearEnd = yearEndBalance;
+        prevContribTotal = contribTotalAtYearEnd;
+      }
+
+      // Store last rows for CSV export
+      window.__yearlyRows = rows;
+
+      var canvas = document.getElementById("chart");
+      drawLineChart(canvas, balances);
+
+    }
+
+    function resetAll() {
+      document.getElementById("initial").value = "10000";
+      document.getElementById("monthly").value = "200";
+      document.getElementById("rate").value = "8";
+      document.getElementById("years").value = "10";
+      document.getElementById("inflation").value = "3";
+      document.getElementById("timing").value = "end";
+      document.getElementById("compound").value = "monthly";
+      document.getElementById("currency").value = "USD";
+
+      document.getElementById("finalValue").textContent = "—";
+      document.getElementById("interestValue").textContent = "—";
+      document.getElementById("presentValue").textContent = "—";
+      document.getElementById("contribValue").textContent = "—";
+      document.getElementById("err").style.display = "none";
+
+      var canvas = document.getElementById("chart");
+      var ctx = canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    document.getElementById("calc").addEventListener("click", calculate);
+    document.getElementById("reset").addEventListener("click", resetAll);
+
+    ["initial","monthly","rate","years","inflation","timing","compound","currency"].forEach(function(id){
+      document.getElementById(id).addEventListener("input", function(){
+        calculate();
+      });
+    });
+
+    calculate();
+  
+
+    function exportYearlyCsv() {
+      var rows = window.__yearlyRows || [];
+      var cur = "USD";
+      var curEl = document.getElementById("currency");
+      if (curEl && curEl.value) cur = curEl.value;
+
+      var lines = [];
+      lines.push(["Year","Contributions_year_" + cur,"Interest_year_" + cur,"Ending_balance_" + cur].join(","));
+      for (var i = 0; i < rows.length; i++) {
+        var r = rows[i];
+        // Use raw numbers in CSV for easy spreadsheet math
+        lines.push([r.year, numSafe(r.contribYear), numSafe(r.interestYear), numSafe(r.endBalance)].join(","));
+      }
+      var csv = lines.join("\n");
+      var blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      var url = URL.createObjectURL(blob);
+
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "yearly_breakdown.csv";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function numSafe(x) {
+      if (!isFinite(x)) return "";
+      return String(Math.round(x * 100) / 100);
+    }
+
+    var exportBtn = document.getElementById("exportCsv");
+    if (exportBtn) exportBtn.addEventListener("click", exportYearlyCsv);
+
+</script>
+</body>
+</html>
